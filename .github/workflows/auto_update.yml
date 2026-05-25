@@ -2,9 +2,8 @@ name: Auto Update M3U8
 
 on:
   schedule:
-    # Berjalan secara automatik setiap 1 jam sekali
     - cron: '0 * * * *'
-  workflow_dispatch: # Boleh klik butang run manual dari web GitHub
+  workflow_dispatch:
 
 jobs:
   update-stream:
@@ -13,6 +12,8 @@ jobs:
     steps:
     - name: Semak keluar kod (Checkout)
       uses: actions/checkout@v4
+      with:
+        persist-credentials: true  # Ini penting untuk bagi kebenaran push
 
     - name: Sediakan Python
       uses: actions/setup-python@v5
@@ -25,5 +26,6 @@ jobs:
         pip install yt-dlp
 
     - name: Jalankan Skrip Loop 2 Minit
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Memasukkan token keselamatan
       run: python update_live.py
-      
