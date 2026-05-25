@@ -1,53 +1,43 @@
 import subprocess
-import urllib.request
-import time
 import os
 
-# Masukkan pautan siaran langsung YouTube anda di sini
-youtube_url = "https://www.youtube.com/watch?v=HgWz05AsLxw"
+# Sini tempat letak nama dan ID Live YouTube anda
+streams = {
+    "Alan_Becker_TV": "HgWz05AsLxw"
+}
 
-def kemaskini_dan_push():
-    try:
-        print("Mengambil pautan m3u8 menggunakan yt-dlp...")
-        m3u8_link = subprocess.check_output(["yt-dlp", "-g", "-f", "best", youtube_url]).decode("utf-8").strip()
+try:
+    m3u_content = "#EXTM3U\n"
+    
+    for name, video_id in streams.items():
+        # Menggunakan format URL YouTube rasmi yang betul
+        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        print(f"Mengambil pautan m3u8 untuk {name}...")
         
-        print("Muat turun isi kandungan m3u8...")
-        req = urllib.request.Request(
-            m3u8_link, 
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        )
-        with urllib.request.urlopen(req) as response:
-            m3u8_content = response.read().decode('utf-8')
+        # Jalankan yt-dlp untuk dapatkan URL m3u8 segar
+        live_url = subprocess.check_output(["yt-dlp", "-g", "-f", "best", youtube_url]).decode("utf-8").strip()
         
-        with open("stream.m3u8", "w", encoding="utf-8") as f:
-            f.write(m3u8_content)
-        print("Fail stream.m3u8 berjaya dikemaskini lokal.")
-
-        # Konfigurasi Git menggunakan token keselamatan repo
-        repo = os.environ.get('GITHUB_REPOSITORY')
-        token = os.environ.get('GITHUB_TOKEN')
-        remote_url = f"https://x-access-token:{token}@github.com/{repo}.git"
-
-        os.system('git config --global user.name "github-actions[bot]"')
-        os.system('git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"')
-        os.system(f'git remote set-url origin {remote_url}')
-        os.system('git add stream.m3u8')
+        # Menyusun format senarai main IPTV (.m3u)
+        m3u_content += f'#EXTINF:-1 tvg-name="{name}" logo="", {name}\n{live_url}\n'
+    
+    # Menyimpan senarai main ke dalam fail live.m3u secara lokal
+    with open("live.m3u", "w", encoding="utf-8") as f:
+        f.write(m3u_content)
         
-        # Sila commit dan push terus tanpa semakan quiet
-        status = os.system('git commit -m "Auto-update stream.m3u8" && git push origin main')
-        
-        if status == 0:
-            print("Berjaya tolak fail ke GitHub!")
-        else:
-            print("Gagal melakukan push atau tiada perubahan.")
+    print("Fail live.m3u berjaya dicipta!")
 
-    except Exception as e:
-        print(f"Ralat berlaku dalam fungsi: {e}")
+    # Memulakan proses automatik Git Push ke GitHub
+    repo = os.environ.get('GITHUB_REPOSITORY')
+    token = os.environ.get('GITHUB_TOKEN')
+    remote_url = f"https://x-access-token:{token}@github.com/{repo}.git"
 
-# Memulakan pusingan
-for i in range(28):
-    print(f"\n--- Pusingan ke-{i+1} ---")
-    kemaskini_dan_push()
-    print("Menunggu 2 minit...")
-    time.sleep(120)
-            
+    os.system('git config --global user.name "github-actions[bot]"')
+    os.system('git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"')
+    os.system(f'git remote set-url origin {remote_url}')
+    os.system('git add live.m3u')
+    os.system('git commit -m "Auto-update IPTV live.m3u" && git push origin main')
+    print("Tahniah! Fail live.m3u berjaya dihantar ke GitHub!")
+
+except Exception as e:
+    print(f"Ralat berlaku: {e}")
+    
