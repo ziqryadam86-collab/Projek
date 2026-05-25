@@ -1,30 +1,26 @@
+import urllib.request
+import re
 
-    
-from flask import Flask, redirect
-import subprocess
-import os
+video_id = "HgWz05AsLxw"
+youtube_url = f"https://www.youtube.com/watch?v={video_id}"
 
-app = Flask(__name__)
+try:
+    req = urllib.request.Request(youtube_url, headers={'User-Agent': 'Mozilla/5.0'})
+    html = urllib.request.urlopen(req).read().decode('utf-8')
+    matches = re.search(r'"hlsManifestUrl":"([^"]+)"', html)
 
-@app.route('/')
-def home():
-    return "Server IPTV Maharaja Adam sedang aktif!"
-
-@app.route('/live')
-def play_live():
-    # ID video YouTube Live Alan Becker
-    video_id = "HgWz05AsLxw"
-    youtube_url = f"https://www.youtube.com/watch?v={video_id}"
-
-    try:
-        # Ekstrak pautan segar secara masa nyata di pelayan Render
-        live_url = subprocess.check_output(["yt-dlp", "-g", "-f", "best", youtube_url]).decode("utf-8").strip()
-        return redirect(live_url, code=302)
-    except Exception as e:
-        return f"Ralat: {e}", 500
-
-if __name__ == '__main__':
-    # Mengikut port yang ditetapkan oleh Render secara automatik
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
-    
+    if matches:
+        m3u8_url = matches.group(1).replace(r'\/', '/')
+        
+        # Di sini kita simpan pautan index.m3u8 YouTube tadi ke fail live.m3u kita sendiri
+        m3u_content = f"#EXTM3U\n#EXTINF:-1 tvg-name=\"Alan_Becker\", Alan Becker TV Live\n{m3u8_url}\n"
+        
+        with open("live.m3u", "w", encoding="utf-8") as f:
+            f.write(m3u_content)
+            
+        print("✅ BERJAYA! Fail live.m3u telah dicipta dengan pautan segar!")
+    else:
+        print("❌ Gagal: Kod hlsManifestUrl tidak ditemui dalam HTML.")
+except Exception as e:
+    print(f"❌ Ralat berlaku: {e}")
+            
